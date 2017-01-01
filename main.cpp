@@ -10,7 +10,7 @@ int main(int argc,char * argv){
 	cout<<"Enter I1(number of works): ";
 	cin>>i1;
 	cout<<endl;
-	cout<<"Enter 2(Concurreny constant)(0-1): ";
+	cout<<"Enter I2(Concurreny constant)(0-1): ";
 	cin>>i2;
 	cout<<endl;
 	return 0;
