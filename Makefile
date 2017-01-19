@@ -1,7 +1,7 @@
 # vim: set tabstop=4 autoindent:
 
 #OBJS specifies which files to compile as part of the project
-OBJS = main.cpp
+OBJS = main.cc
 
 #OBJ_NAME specifes the name of our executable
 OBJ_NAME = main.out

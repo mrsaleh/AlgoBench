@@ -4,7 +4,28 @@
 #include <cassert>
 #include <cmath>
 #include <cstdlib>
+#include <vector>
+#include <numeric>
+
 using namespace std;
+
+float ComputeDistributionOfActivities(std::vector<uint32_t> _levelsWidth,uint32_t _numberOfWorks){
+	// Sigma(Wa,Wbar) a=1 to m / 2(m-1)(Wbar-1)
+	float wBar = 0.0f;
+	//Calculate wBar which is average of levels width
+	wBar = accumulate(_levelsWidth.begin(),_levelsWidth.end(),0);
+	wBar = wBar / static_cast<float>(_levelsWidth.size());
+	//Calculate Standard Deviation
+	float sigma = 0.0f;
+	for(std::vector<uint32_t>::const_iterator it=_levelsWidth.begin();it!=_levelsWidth.end();it++){
+		sigma += fabs(wBar - (*it));
+	}
+	sigma = sigma / (static_cast<float>(_numberOfWorks-1)*(wBar - 1.0f));
+	return sigma;
+}
+
+
+
 
 uint32_t ComputeLevelsNumber(uint32_t _numberOfWorks,float _ConcurrencyIndicator){
 	// I2 = (m-1) / (n-1) where m is levels number and n is number of works
