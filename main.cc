@@ -22,6 +22,7 @@ class RCPSP{
 		std::vector<std::vector<int>> m_LevelsActivities;
 	private:
 	void CalculatePredecessors();
+	int FindFirstLevel();
 	public:
 	RCPSP(std::string pattersonFilename);
 };
@@ -36,6 +37,12 @@ void RCPSP::CalculatePredecessors(){
 			this->m_ActivitiesPredecessors.at((*successorActivity)-1).push_back(activityId);
 		}
 		activityId++;
+	}
+}
+
+void RCPSP::FindFirstLevel(){
+	for(auto predecessors = this->m_ActivitiesPredecessors.begin();predecessors!=this->m_ActivitiesPredecessors.end();predecessors++){
+			
 	}
 }
 
