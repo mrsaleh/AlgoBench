@@ -8,6 +8,7 @@
 #include <numeric>
 #include <string>
 #include <fstream>
+#include <algorithm>
 
 class RCPSP{
 	private:
@@ -20,9 +21,11 @@ class RCPSP{
 		std::vector<std::vector<int>> m_ActivitiesPredecessors;
 		std::vector<std::vector<int>> m_ActivitiesResourceConsumption;
 		std::vector<std::vector<int>> m_LevelsActivities;
+		std::vector<std::vector<int>> m_LevelsActivitiesNoDuplicates;
+		std::vector<int> m_ActivitiesLevel;
 	private:
 	void CalculatePredecessors();
-	int FindFirstLevel();
+	int GetRootActivity();
 	public:
 	RCPSP(std::string pattersonFilename);
 };
@@ -40,9 +43,55 @@ void RCPSP::CalculatePredecessors(){
 	}
 }
 
-void RCPSP::FindFirstLevel(){
+int RCPSP::GetRootActivity(){
+	int i=0;
 	for(auto predecessors = this->m_ActivitiesPredecessors.begin();predecessors!=this->m_ActivitiesPredecessors.end();predecessors++){
-			
+		i++;
+		if(predecessors->size()==0)
+			return i;
+	}
+	return -1;
+}
+
+RCSP::CalculateLevelRecursive(std::vector<int> successors,int level){
+	if(this->m_LevelsCount<level)
+		this->m_LevelsCount = level+1;
+	if(this->levelsActivities.size()<level+1){
+		this->levelsActivities.resize(level+1);
+	}
+	for(auto activity=successors.begin();activity!=successors.end();activity++){
+		if(level>this->m_ActivitiesLevel[*activity])
+			this->m_ActivitiesLevel[*activity]=level;
+		// prevent from adding activity more than one time to the level activities vector
+		// notice that still we may have the activity in another level acitivities vector		
+		if(! std::find(this->m_levelsActivities[level].begin(),this->m_levelsActivities[level].end(),activity))
+			this->m_LevelsActivities[level].push_back(activity);
+		this->CalculateLevelRecursive(this->ActivitiesSuccessors[*activity],level+1);
+	}
+}
+
+/*
+Calculate levels for activities and activities of each level
+*/
+RCSP::CalculateLevelsTotal(){
+	//Root activity is the activity at level 0 that have no predecessors
+	int rootActivity = GetZeroLevelActivity();
+	if(rootActivity==-1){
+		throw std::exception("no root activty found for the patterson matrix");
+	}
+	this->m_ActivitiesLevel[rootActivity] = 0;
+	this->m_LevelsActivities.resize(1);
+	this->m_LevelsCount = 1;
+	this->m_LevelsActivities[0].push_back(rootActivity);
+	int level = 1;
+	std::vector<int> successors = this->m_ActivitiesSuccessors[rootActivity];
+	CalculateLevelRecursive(successors,level);
+	//categorize activities by level
+	int activity = 0;
+	this->m_LevelsActovitiesNoDuplicates.resize(this->LevelsCount);
+	for(auto level = this->m_ActivitiesLevel.begin();level == this->m_ActivitiesLevel.end();level++){		
+		this->m_LevelsActivitiesNoDuplicates[*level] = activity;
+		activity++;
 	}
 }
 
@@ -83,50 +132,21 @@ RCPSP::RCPSP(std::string pattersonFilename){
 	pattersonFile.close();
 
 	CalculatePredecessors();
+	CalculateLevelsTotal();
+}
+
+float RCPSP::getActivityResourceConsumption(int activity){
+	return this->m_ActivitiesResourceConsuption[activity];
 }
 
 
-
-/*
-Dummy function
-*/
-float getActivityResourceConsumption(int activity){
-	return 0;
+std::vector<int> RCPSP::getLevelActivities(int level){
+	return this->m_LevelsActivitiesNoDuplicates[level];
 }
 
-/*
-Dummy function
-*/
-std::vector<int> getLevelActivities(int level){
-	return std::vector<int>();
-}
-/*
-Dummy function
-*/
+
 int getResourceStock(int resource){
-	return 0;
-}
-
-/*
-Dummy function
-*/
-std::vector<int> getResources(){
-	return std::vector<int>();
-}
-
-/*
-Dummy function
-*/
-std::vector<int> getLevels(){
-	return std::vector<int>();
-}
-
-/*
-Dummy function
-*/
-
-int getLevelsCount(){
-	return 0;
+	return this->m_ResourcesStocks[resource];
 }
 
 /*
@@ -139,7 +159,7 @@ int getLevelsCount(){
 
 	returns : W(a,k)
 */
-int computeResourceConsumptionAtSpecifiedLevel(int level,int resource){	
+int RCPSP::computeResourceConsumptionAtSpecifiedLevel(int level,int resource){	
 	int sigma = 0;
 	std::vector<int> activities = getLevelActivities(level);
 	for(auto activity=activities.begin();activity!=activities.end();activity++){		
@@ -149,23 +169,23 @@ int computeResourceConsumptionAtSpecifiedLevel(int level,int resource){
 }
 
 
-float computeEta(int resource){
+float RCPSP::computeEta(int resource){
 	float sigma = 0;
-	std::vector<int> levels = getLevels();
-	for(auto level = levels.begin();level!=levels.end();level++){
-		sigma += std::fabs(computeResourceConsumptionAtSpecifiedLevel(*level,resource));
+	int levelsCount = this->m_LevelsCount;
+	for(auto level = 0;level < levelsCount;level++){
+		sigma += std::fabs(computeResourceConsumptionAtSpecifiedLevel(level,resource));
 	}
 	return sigma / getLevelsCount();
 }
 
-float sgn(float num){
+float RCPSP::sgn(float num){
 	if(num>0)
 		return 1;
 	else
 		return 0;
 }
 
-float computeKeiP(){
+float RCPSP::computeKeiP(){
 	std::vector<int> resources = getResources();
 	float sigma = 0;
 	for(auto resource=resources.begin();resource!=resources.end();resource++){
@@ -174,7 +194,7 @@ float computeKeiP(){
 	return sigma;
 }
 
-float computeTao(){
+float RCPSP::computeTao(){
 	float sigma = 0;
 	std::vector<int> resources = getResources();
 	for(auto resource = resources.begin();resource!=resources.end();resource++){
