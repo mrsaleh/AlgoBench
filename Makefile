@@ -1,7 +1,7 @@
 # vim: set tabstop=4 autoindent:
 
 #OBJS specifies which files to compile as part of the project
-OBJS = main.cc
+OBJS = main.cc rcpsp.cc
 
 #OBJ_NAME specifes the name of our executable
 OBJ_NAME = main.out
@@ -18,5 +18,5 @@ LINKER_FLAGS =
 
 #This is the target compiles our executable
 all : $(OBJS)
-	$(CC) $(OBJS) $(COMPILER_FLAGS) $(LINKER_FLAGS) -m64 -o $(OBJ_NAME)
+	$(CC)  $(OBJS) $(COMPILER_FLAGS) $(LINKER_FLAGS) -m64 -o $(OBJ_NAME)
 
