@@ -251,15 +251,17 @@ void TestComputeLevelsNumber(){
 }
 
 int main(int argc,char * argv){
-	TestComputeLevelsNumber();
-	uint32_t i1 = 0; //Number of works
-	float i2 = 0.0f; //Concurrency of works range from 0.0 to 1.0
-	std::cout<<"Enter I1(number of works): ";
-	std::cin>>i1;
-	std::cout<<std::endl;
-	std::cout<<"Enter I2(Concurreny constant)(0-1): ";
-	std::cin>>i2;
-	std::cout<<std::endl;
+	uint32_t lastFileId = 0;
+	cout<< "Enter last file index(first file name supposed to be 1):";
+	cin >>lastFileId;
+	for(int i=1;i<=lastFileId;i++){
+		RCPSP rcpsp(std::to_string(lastFileId));
+		float TAO  = rcpsp.computeTAO();
+		fstream rcpspFile;
+		rcpspFile.open(std::to_string(lastFileId,ios::app));
+		rcpspFile<<std::endl<<"TAO:"<<TAO;
+		rcpspFile.close();
+	}
 	return 0;
 }
 
