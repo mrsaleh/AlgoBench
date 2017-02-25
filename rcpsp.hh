@@ -4,16 +4,15 @@
 
 class RCPSP{
 	private:
-		int m_LevelsCount;
-		int m_ResourcesCount;
-		int m_ActivitiesCount;
+		int m_LevelsCount = -1;
+		int m_ResourcesCount = -1;
+		int m_ActivitiesCount = -1;
 		std::vector<int> m_ActivitiesDuration;
 		std::vector<int> m_ResourcesStock;
 		std::vector<std::vector<int>> m_ActivitiesSuccessors;
 		std::vector<std::vector<int>> m_ActivitiesPredecessors;
 		std::vector<std::vector<int>> m_ActivitiesResourceConsumption;
 		std::vector<std::vector<int>> m_LevelsActivities;
-		std::vector<std::vector<int>> m_LevelsActivitiesNoDuplicates;
 		std::vector<int> m_ActivitiesLevel;
 	private:
 	void CalculatePredecessors();
@@ -26,7 +25,7 @@ class RCPSP{
 	float sgn(float num);
 	float ComputeKeiP();
 	int FindActivityLevel(int activity);
-	void CaluclateLevels();
+	void CalculateLevels();
 	public:
 	float ComputeTAO();
 	public:

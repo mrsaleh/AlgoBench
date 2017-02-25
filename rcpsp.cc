@@ -28,57 +28,57 @@ int RCPSP::GetRootActivity(){
 }
 
 int RCPSP::FindActivityLevel(int activity){
-	level = 0;
-	for(std::vector<int>::const_iterator predecessor = this->m_ActivitiesPredecessors[activity].begin();predecessors!=this->m_ActivitiesPredecessors[activity].end();predecessor++){
-		if(this->m_ActivitiesLevel(*predecessor)==-1)
+	int level = 0;
+	for(std::vector<int>::const_iterator predecessor = this->m_ActivitiesPredecessors[activity-1].begin();predecessor !=this->m_ActivitiesPredecessors[activity-1].end();predecessor++){
+		if(this->m_ActivitiesLevel[(*predecessor)-1]==-1)
 			return -1;		
-		levelOfPredecessorActivity = this->m_ActivitiesLevel(*predecessor);
+		int levelOfPredecessorActivity = this->m_ActivitiesLevel[(*predecessor)-1];
 		if(levelOfPredecessorActivity+1>level)
-			level = levelOfPredecessorActivity;	
+			level = levelOfPredecessorActivity+1;	
 	}
 	return level;
 }
 
-void RCPSP::CaluclateLevels(){
+void RCPSP::CalculateLevels(){
 	int rootActivity = GetRootActivity();
 	this->m_ActivitiesLevel = std::vector<int>(this->m_ActivitiesCount,-1);
-	this->m_ActivitiesLevel[rootActivity] = 0;
+	//this->m_ActivitiesLevel[rootActivity-1] = 0;
 	
 	//Find each activity level
-	std::vector<int>::const_iterator resetIterator= this->m_ActivitiesLevel.begin();
-	int resetActivity = 0;
 	bool reset = false;
-	int activity=0;
-	std::vector<int>::const_iterator activityLevel = this->m_ActivitiesLevel.begin();
+	int activity=1;
+	std::vector<int>::iterator activityLevel = this->m_ActivitiesLevel.begin();
 	do{
-		activity = resetActivity;
-		activityLevel = resetIterator;
 		reset = false;
+		activity = 1;
+		activityLevel = this->m_ActivitiesLevel.begin();
 		for(;activityLevel != this->m_ActivitiesLevel.end();activityLevel++,activity++){
 			if(*activityLevel!=-1)
 				continue;
 			*activityLevel = FindActivityLevel(activity);
-			if(*activityLevel>this->m_LevelsCount){
-				this->m_LevelsCount = *activityLevel;			
-			}
-			if(*activityLevel==-1){
+			if (*activityLevel == -1) {
 				reset = true;
-				resetActivity = activity;
-				resetIterator = activityLevel;				
-			}
+			}			
 		}
 	}while(reset);
+	
+	for (auto activityLevel = this->m_ActivitiesLevel.begin();activityLevel != this->m_ActivitiesLevel.end();activityLevel++) {
+		if (this->m_LevelsCount < *activityLevel+1) {
+			this->m_LevelsCount = *activityLevel + 1;
+		}
+	}
 	//Categorizing activities by level
 	this->m_LevelsActivities.resize(this->m_LevelsCount);
-	for(int activity=0,std::vector<int>::const_iterator activityLevel=this->m_ActivitiesLevel;activityLevel!=this->m_ActivitiesLevel.end();activity++){
-		this->m_LevelsActivities[*activityLevel].push_back(activity);
+	activity = 1;
+	for(std::vector<int>::const_iterator activityLevel=this->m_ActivitiesLevel.begin();activityLevel!=this->m_ActivitiesLevel.end();activity++, activityLevel++){
+		this->m_LevelsActivities[(*activityLevel)].push_back(activity);
 	}
 }
 
 
 RCPSP::RCPSP(std::string pattersonFilename){
 	std::ifstream pattersonFile;
-	pattersonFile.open(pattersonFilename);
+	pattersonFile.open(pattersonFilename,std::ios::in);
 	if(! pattersonFile){
 		throw pattersonFilename + " file not found";
 	}
@@ -87,6 +87,8 @@ RCPSP::RCPSP(std::string pattersonFilename){
 
 	this->m_ActivitiesDuration.resize(this->m_ActivitiesCount);
 	this->m_ResourcesStock.resize(this->m_ResourcesCount);
+	this->m_ActivitiesSuccessors.resize(this->m_ActivitiesCount);
+	this->m_ActivitiesResourceConsumption.resize(this->m_ActivitiesCount);
 
 	for(int resource=0;resource<this->m_ResourcesCount;resource++){
 		pattersonFile >> this->m_ResourcesStock.at(resource);
@@ -95,16 +97,16 @@ RCPSP::RCPSP(std::string pattersonFilename){
 		//read activity duration
 		pattersonFile >> this->m_ActivitiesDuration.at(activity);
 		//Allocate memory for current activity resource consumption
-		this->m_ActivitiesResourceConsumption.resize(this->m_ResourcesCount);
+		this->m_ActivitiesResourceConsumption[activity].resize(this->m_ResourcesCount);
 		//read acitvity's each resource consumption
-		for(int resource=0;resource>this->m_ResourcesCount;resource++){
+		for(int resource=0;resource<this->m_ResourcesCount;resource++){
 			pattersonFile >> this->m_ActivitiesResourceConsumption.at(activity).at(resource);
 		}
 		//read successors
 		int successorActivitiesCount = 0;
 		pattersonFile >> successorActivitiesCount;
 		//allocate memory for successor activities
-		this->m_ActivitiesSuccessors.resize(successorActivitiesCount);
+		this->m_ActivitiesSuccessors[activity].resize(successorActivitiesCount);
 		for(int successorActivity = 0;successorActivity < successorActivitiesCount;successorActivity++){
 			pattersonFile >> this->m_ActivitiesSuccessors.at(activity).at(successorActivity);
 		}
@@ -116,12 +118,12 @@ RCPSP::RCPSP(std::string pattersonFilename){
 }
 
 int RCPSP::GetActivityResourceConsumption(int activity,int resource){
-	return this->m_ActivitiesResourceConsumption[activity][resource];
+	return this->m_ActivitiesResourceConsumption[activity-1][resource];
 }
 
 
 std::vector<int> RCPSP::GetLevelActivities(int level){
-	return this->m_LevelsActivitiesNoDuplicates[level];
+	return this->m_LevelsActivities[level];
 }
 
 

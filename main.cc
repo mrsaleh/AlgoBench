@@ -17,7 +17,7 @@ float ComputeDistributionOfActivities(std::vector<uint32_t> _levelsWidth,uint32_
 	// Sigma(Wa,Wbar) a=1 to m / 2(m-1)(Wbar-1)
 	float wBar = 0.0f;
 	//Calculate wBar which is average of levels width
-	wBar = std::accumulate(_levelsWidth.begin(),_levelsWidth.end(),0);
+	wBar = (float)std::accumulate(_levelsWidth.begin(),_levelsWidth.end(),0);
 	wBar = wBar / static_cast<float>(_levelsWidth.size());
 	//Calculate Standard Deviation
 	float sigma = 0.0f;
