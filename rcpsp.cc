@@ -147,7 +147,11 @@ int RCPSP::ComputeResourceConsumptionAtSpecifiedLevel(int level,int resource){
 	for(auto activity=activities.begin();activity!=activities.end();activity++){		
 		sigma += this->GetActivityResourceConsumption(*activity,resource); 
 	}
-	return this->GetResourceStock(resource) - sigma;
+	int result = this->GetResourceStock(resource) - sigma;
+	if(result>0)
+		return 0;
+	else
+		return fabs(result);
 }
 
 
