@@ -1,5 +1,12 @@
 # vim: set tabstop=4 autoindent:
 
+#OBJS specifies which files to compile as part of the TEST
+TEST_OBJS = test.cc rcpsp.cc
+
+#OBJ_NAME specifes the name of our TEST executable
+TEST_OBJ_NAME = test.out
+
+
 #OBJS specifies which files to compile as part of the project
 OBJS = main.cc rcpsp.cc
 
@@ -20,3 +27,6 @@ LINKER_FLAGS =
 all : $(OBJS)
 	$(CC)  $(OBJS) $(COMPILER_FLAGS) $(LINKER_FLAGS) -m64 -o $(OBJ_NAME)
 
+
+test : $(TEST_OBJS)
+	$(CC)  $(TEST_OBJS) $(COMPILER_FLAGS) $(LINKER_FLAGS) -m64 -o $(TEST_OBJ_NAME)

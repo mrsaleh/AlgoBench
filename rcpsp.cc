@@ -3,6 +3,65 @@
 #include <algorithm>
 #include <cmath>
 #include <exception>
+#include <iostream>
+
+bool operator == (const RCPSP& lhs,const RCPSP& rhs){
+	if(lhs.m_ActivitiesCount!=rhs.m_ActivitiesCount)
+		return false;
+	bool * checkedColumns = new bool[lhs.m_ActivitiesCount];
+	for(int i=0;i<lhs.m_ActivitiesCount;i++){
+		checkedColumns[i] = false;
+	}
+	
+	for(int c=0;c<lhs.m_ActivitiesCount;c++){
+		for(int j=0;j<lhs.m_ActivitiesCount;j++){
+			if(checkedColumns[j])
+				continue;
+			//Check Column equality(c,j)
+			for(int i=0;i<lhs.m_ActivitiesCount;i++){
+				if(lhs.m_PredecessorsMatrix[i][c] == rhs.m_PredecessorsMatrix[i][j]){
+					checkedColumns[c] = true;
+					break;					
+				}
+			}
+			if(checkedColumns[j])
+				return false; // if there is at least one column in first one , that not exist in the other one , then they are not equal
+		}
+	}
+
+	return true;
+}
+
+void RCPSP::GeneratePredecessorsMatrix(){
+	int activityId = 1;
+	// ROW , COL
+	this->m_PredecessorsMatrix = new bool *[this->m_ActivitiesCount];
+	for(int i=0;i<this->m_ActivitiesCount;i++){
+		this->m_PredecessorsMatrix[i] = new bool[this->m_ActivitiesCount];
+		for(int j=0;j<this->m_ActivitiesCount;j++){
+			this->m_PredecessorsMatrix[i][j] = false;
+		}
+	}
+
+	for(auto predecessors = this->m_ActivitiesPredecessors.begin();predecessors!=this->m_ActivitiesPredecessors.end();predecessors++){
+		for(auto predecessorActivity = predecessors->begin();predecessorActivity!=predecessors->end();predecessorActivity++){
+			this->m_PredecessorsMatrix[(*predecessorActivity)-1][activityId-1] = true;
+		}
+		activityId++;
+	}
+}
+
+void RCPSP::PrintPredecessorsMatrix(){
+	for(int i=0;i<this->m_ActivitiesCount;i++){
+		for(int j=0;j<this->m_ActivitiesCount;j++){
+			if(this->m_PredecessorsMatrix[i][j])
+				std::cout<<"1 ";
+			else
+				std::cout<<"0 ";
+		}
+		std::cout<<std::endl;
+	}
+}
 
 void RCPSP::CalculatePredecessors(){
 	//Allocate memory for predecessors
@@ -115,6 +174,7 @@ RCPSP::RCPSP(std::string pattersonFilename){
 
 	CalculatePredecessors();
 	CalculateLevels();
+	GeneratePredecessorsMatrix();
 }
 
 int RCPSP::GetActivityResourceConsumption(int activity,int resource){

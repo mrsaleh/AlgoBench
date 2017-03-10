@@ -1,8 +1,9 @@
 #include <vector>
 #include <string>
 
-
 class RCPSP{
+	friend bool operator == (const RCPSP& lhs,const RCPSP& rhs);
+
 	private:
 		int m_LevelsCount = -1;
 		int m_ResourcesCount = -1;
@@ -14,6 +15,7 @@ class RCPSP{
 		std::vector<std::vector<int>> m_ActivitiesResourceConsumption;
 		std::vector<std::vector<int>> m_LevelsActivities;
 		std::vector<int> m_ActivitiesLevel;
+		bool ** m_PredecessorsMatrix = nullptr;
 	private:
 	void CalculatePredecessors();
 	int GetRootActivity();
@@ -27,6 +29,8 @@ class RCPSP{
 	int FindActivityLevel(int activity);
 	void CalculateLevels();
 	public:
+	void GeneratePredecessorsMatrix();
+	void PrintPredecessorsMatrix();
 	float ComputeTAO();
 	public:
 	RCPSP(std::string pattersonFilename);
