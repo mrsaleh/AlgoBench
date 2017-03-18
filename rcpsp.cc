@@ -1,3 +1,4 @@
+/* vim: set tabstop=4 autoindent: */
 #include "rcpsp.hh"
 #include <fstream>
 #include <algorithm>
@@ -245,4 +246,132 @@ float RCPSP::ComputeTAO(){
 	}
 	return sigma / this->ComputeKeiP();
 }
+
+//Network size indicator
+void RCPSP::CalculateI1(){
+	this->I1 = static_cast<float>(this->m_ActivitiesCount);
+}
+
+//Serial or parallel indicator
+void RCPSP::CalculateI2(){
+	if(this->m_ActivitiesCount==1)
+		this->I2 = 1;
+	else{
+		this->I2 = static_cast<float>(this->m_LevelsCount - 1) / static_cast<float>(this->m_ActivitiesCount - 1);
+	}
+
+}
+
+
+//Its the W_Bar in formula
+float RCPSP::CalculateAverageOfLevelsWidths(){
+	this->m_AverageOfLevelsWidths = 0;
+	int sigma = 0;
+	for(int level=0;level<this->m_LevelsCount;level++){
+		sigma = this->m_LevelsActivities[level].size() - 2;
+	}	
+	this->m_AverageOfLevelsWidths = static_cast<float>(sigma) / this->m_LevelsCount;
+}
+
+//Activity distribuation indicator
+// m is levels count
+// n is activities count
+// a is level
+// (Sigma(a=1,m)(|W(a) - W_bar|)) / (2 * (m-1) * (W_bar - 1))
+//notice that we don't count begin and end node in folmula
+float RCPSP::CalculateI3(){
+	float sigma = 0;
+	if(this->m_LevelsCount==1 || this->m_LevelsCount==this->m_ActivitiesCount - 2)
+		this->m_I3 = 0;
+	else{
+		for(int level=1;level<this->m_LevelsCount-1;level++){
+			//notice that we minus activities count with 2 to remove virtual nodes effect (begin node and end node)
+			sigma += abs((this->m_LevelsActivities[level].size()) /* W(a) */ - this->m_AverageOfLevelsWidth) /*W_bar*/;
+		}
+		this->m_I3 = static_cast<float>(sigma) / static_cast<float>(2 * (this->n_LevelsCount - 1) (this->m_AverageOfLevelsWidth - 1));
+	}
+}
+
+
+//D= Sigma(a=1,m-1)(W(a),W_bar)
+
+float RCPSP::D(){
+	int sigma = 0;
+	for(int level=1;level<this->m_LevelsCount-1;level++){
+		sigma = (this->m_LevelsActivities[level].size()) * (this->m_LevelsActivities[level+1].size());
+	}		
+	return sigma;
+}
+
+
+// n_prime is the count of predecessor relation with length of one
+int CalculateArcsWithLength(int arcLength){
+	int arcCount = 0;
+	for(int activity=1;activity<this->m_ActivitiesCount-1;activity++){
+		int activityLevel = this->m_ActivitiesLevel[activity];
+		for(auto successor = this->m_ActivitiesSuccessors.begin();successor!=this->m_ActivitiesSuccessors.end();successor++){
+			successorLevel = this->ActivitiesLevel[*successor];
+			if(successorLevel - activityLevel == arcLength){
+				arcCount ++;
+			}
+		}
+	}
+	return arcCount;
+}
+
+int CalculateNPrime(){
+	this->m_NPrime = CalculateArcsWithLength(1);
+}
+
+
+
+//Short arc indicator
+//n is activities count
+float RCPSP::I4(){
+	float i4 = 0;
+	w1 = this->ActivitiesLevel[1];
+	// 1 if D = n - w1
+	//else
+	// (n_prime -  n + w1) / (D - n + w1)
+	if(D() == this->m_ActivitiesCount - this->m_LevelsActivities[1].size()/* w1  */){
+		i4 = static_cast<float>(this->m_NPrime - this->m_ActivitiesCount /* n */ + this->m_LevelsActivities[1])/* w1  */  / (D() -  + this->m_ActivitiesCount  /* w1 */ + this->m_LevelsActivities[1]);
+	}
+	return i4;
+
+}
+
+/* |A| is total number of arcs*/
+int CaculateTotalNumberOfArcs(){
+	int a = 0;
+	int activity = -1;
+	for(auto activityPredecessors=this->m_ActivitiesPredecessors.begin();activityPredecessors!=this->m_ActivitiesPredecessors.end();activityPredecessors++){
+		activity++;
+		if(activity==0)
+			continue;
+		if(activity==this->m_ActivitiesCount-1)
+			continue;
+		for(auto predecessor=activityPredecessors.begin();predecessor!=activityPredecessors.end();predecessor++){
+			if(*predecssor==0 || *predecessor==this->m_ActivitiesCount-1)
+				continue;
+			a++;
+		}
+	}
+	this->m_TotalNumberOfArcs = a;
+}
+
+//Long arc indicator
+//n is activities count
+//w1 is width of level one
+//m is levels count
+//Resource Constrained Project Scheduling Problem
+float RCPSP::I5(){
+	//1 if |A| = n - w1
+	int sigma = 0;
+	for(int level=1;level<this->m_LevelsCount-1;level++){
+		sigma = CalculateArcsWithLength(level) * (this->LevelsCount-level-1) / (this->LevelsCount-2);
+	}
+	sigma += CalculateArcsWithLength(1) - this->m_ActivitiesCount + this->m_LevelsActivities[1].size();
+	sigma /= this->m_TotalNumberOfArcs - this->m_ActivitiesCount + this->m_LevelsActivities[1];
+}
+
 
