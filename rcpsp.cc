@@ -212,14 +212,14 @@ int RCPSP::ComputeResourceConsumptionAtSpecifiedLevel(int level,int resource){
 	if(result>0)
 		return 0;
 	else
-		return fabs(result);
+		return static_cast<int>(fabs(result));
 }
 
 
 float RCPSP::ComputeEta(int resource){
 	float sigma = 0;
 	for(auto level = 0;level < this->m_LevelsCount;level++){
-		sigma += std::fabs(this->ComputeResourceConsumptionAtSpecifiedLevel(level,resource));
+		sigma += static_cast<float>(std::fabs(this->ComputeResourceConsumptionAtSpecifiedLevel(level,resource)));
 	}
 	return sigma / this->m_LevelsCount;
 }
@@ -249,22 +249,22 @@ float RCPSP::ComputeTAO(){
 
 //Network size indicator
 void RCPSP::CalculateI1(){
-	this->I1 = static_cast<float>(this->m_ActivitiesCount);
+	this->m_I1 = static_cast<float>(this->m_ActivitiesCount);
 }
 
 //Serial or parallel indicator
 void RCPSP::CalculateI2(){
 	if(this->m_ActivitiesCount==1)
-		this->I2 = 1;
+		this->m_I2 = 1;
 	else{
-		this->I2 = static_cast<float>(this->m_LevelsCount - 1) / static_cast<float>(this->m_ActivitiesCount - 1);
+		this->m_I2 = static_cast<float>(this->m_LevelsCount - 1) / static_cast<float>(this->m_ActivitiesCount - 1);
 	}
 
 }
 
 
 //Its the W_Bar in formula
-float RCPSP::CalculateAverageOfLevelsWidths(){
+void RCPSP::CalculateAverageOfLevelsWidths(){
 	this->m_AverageOfLevelsWidths = 0;
 	int sigma = 0;
 	for(int level=0;level<this->m_LevelsCount;level++){
@@ -279,23 +279,23 @@ float RCPSP::CalculateAverageOfLevelsWidths(){
 // a is level
 // (Sigma(a=1,m)(|W(a) - W_bar|)) / (2 * (m-1) * (W_bar - 1))
 //notice that we don't count begin and end node in folmula
-float RCPSP::CalculateI3(){
+void RCPSP::CalculateI3(){
 	float sigma = 0;
 	if(this->m_LevelsCount==1 || this->m_LevelsCount==this->m_ActivitiesCount - 2)
 		this->m_I3 = 0;
 	else{
 		for(int level=1;level<this->m_LevelsCount-1;level++){
 			//notice that we minus activities count with 2 to remove virtual nodes effect (begin node and end node)
-			sigma += abs((this->m_LevelsActivities[level].size()) /* W(a) */ - this->m_AverageOfLevelsWidth) /*W_bar*/;
+			sigma += abs((this->m_LevelsActivities[level].size()) /* W(a) */ - this->m_AverageOfLevelsWidths) /*W_bar*/;
 		}
-		this->m_I3 = static_cast<float>(sigma) / static_cast<float>(2 * (this->n_LevelsCount - 1) (this->m_AverageOfLevelsWidth - 1));
+		this->m_I3 = static_cast<float>(sigma) / static_cast<float>(2 * (this->m_LevelsCount - 1) * (this->m_AverageOfLevelsWidths - 1));
 	}
 }
 
 
 //D= Sigma(a=1,m-1)(W(a),W_bar)
-
-float RCPSP::D(){
+//Maximum possible arcs with length of 1
+int RCPSP::D(){
 	int sigma = 0;
 	for(int level=1;level<this->m_LevelsCount-1;level++){
 		sigma = (this->m_LevelsActivities[level].size()) * (this->m_LevelsActivities[level+1].size());
@@ -305,12 +305,12 @@ float RCPSP::D(){
 
 
 // n_prime is the count of predecessor relation with length of one
-int CalculateArcsWithLength(int arcLength){
+int RCPSP::CalculateArcsWithLength(int arcLength){
 	int arcCount = 0;
 	for(int activity=1;activity<this->m_ActivitiesCount-1;activity++){
 		int activityLevel = this->m_ActivitiesLevel[activity];
-		for(auto successor = this->m_ActivitiesSuccessors.begin();successor!=this->m_ActivitiesSuccessors.end();successor++){
-			successorLevel = this->ActivitiesLevel[*successor];
+		for(auto successor = this->m_ActivitiesSuccessors[activity].begin();successor!=this->m_ActivitiesSuccessors[activity].end();successor++){			
+			int successorLevel = this->m_ActivitiesLevel[*successor];
 			if(successorLevel - activityLevel == arcLength){
 				arcCount ++;
 			}
@@ -319,7 +319,7 @@ int CalculateArcsWithLength(int arcLength){
 	return arcCount;
 }
 
-int CalculateNPrime(){
+void RCPSP::CalculateNPrime(){
 	this->m_NPrime = CalculateArcsWithLength(1);
 }
 
@@ -327,21 +327,20 @@ int CalculateNPrime(){
 
 //Short arc indicator
 //n is activities count
-float RCPSP::I4(){
+void RCPSP::CalculateI4(){
 	float i4 = 0;
-	w1 = this->ActivitiesLevel[1];
+	auto w1 = this->m_ActivitiesLevel[1];
 	// 1 if D = n - w1
 	//else
 	// (n_prime -  n + w1) / (D - n + w1)
 	if(D() == this->m_ActivitiesCount - this->m_LevelsActivities[1].size()/* w1  */){
-		i4 = static_cast<float>(this->m_NPrime - this->m_ActivitiesCount /* n */ + this->m_LevelsActivities[1])/* w1  */  / (D() -  + this->m_ActivitiesCount  /* w1 */ + this->m_LevelsActivities[1]);
+		i4 = static_cast<float>(this->m_NPrime - this->m_ActivitiesCount /* n */ + this->m_LevelsActivities[1].size())/* w1  */  / (D() -  + this->m_ActivitiesCount  /* w1 */ + this->m_LevelsActivities[1].size());
 	}
-	return i4;
-
+	this->m_I4 = i4;
 }
 
 /* |A| is total number of arcs*/
-int CaculateTotalNumberOfArcs(){
+void RCPSP::CalculateTotalNumberOfArcs(){
 	int a = 0;
 	int activity = -1;
 	for(auto activityPredecessors=this->m_ActivitiesPredecessors.begin();activityPredecessors!=this->m_ActivitiesPredecessors.end();activityPredecessors++){
@@ -350,8 +349,8 @@ int CaculateTotalNumberOfArcs(){
 			continue;
 		if(activity==this->m_ActivitiesCount-1)
 			continue;
-		for(auto predecessor=activityPredecessors.begin();predecessor!=activityPredecessors.end();predecessor++){
-			if(*predecssor==0 || *predecessor==this->m_ActivitiesCount-1)
+		for(auto predecessor=activityPredecessors->begin();predecessor!=activityPredecessors->end();predecessor++){
+			if(*predecessor ==0 || *predecessor==this->m_ActivitiesCount-1)
 				continue;
 			a++;
 		}
@@ -364,14 +363,14 @@ int CaculateTotalNumberOfArcs(){
 //w1 is width of level one
 //m is levels count
 //Resource Constrained Project Scheduling Problem
-float RCPSP::I5(){
+void RCPSP::CalculateI5(){
 	//1 if |A| = n - w1
 	int sigma = 0;
 	for(int level=1;level<this->m_LevelsCount-1;level++){
-		sigma = CalculateArcsWithLength(level) * (this->LevelsCount-level-1) / (this->LevelsCount-2);
+		sigma = CalculateArcsWithLength(level) * (this->m_LevelsCount-level-1) / (this->m_LevelsCount-2);
 	}
 	sigma += CalculateArcsWithLength(1) - this->m_ActivitiesCount + this->m_LevelsActivities[1].size();
-	sigma /= this->m_TotalNumberOfArcs - this->m_ActivitiesCount + this->m_LevelsActivities[1];
+	this->m_I5 = sigma / static_cast<float>( this->m_TotalNumberOfArcs - this->m_ActivitiesCount + this->m_LevelsActivities[1].size());
 }
 
 

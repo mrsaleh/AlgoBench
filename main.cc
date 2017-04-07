@@ -31,7 +31,7 @@ float ComputeDistributionOfActivities(std::vector<uint32_t> _levelsWidth,uint32_
 uint32_t ComputeLevelsNumber(uint32_t _numberOfWorks,float _ConcurrencyIndicator){
 	// I2 = (m-1) / (n-1) where m is levels number and n is number of works
 	//so (m-1) = I2 * (n-1) -> m = (I2 * (n-1)) + 1
-	uint32_t levelsNumber =round( (_ConcurrencyIndicator * ((float)_numberOfWorks - 1.0f)) + 1.0f);
+	uint32_t levelsNumber =static_cast<uint32_t>( round( (_ConcurrencyIndicator * ((float)_numberOfWorks - 1.0f)) + 1.0f));
 	std::cout<<"s:"<<_ConcurrencyIndicator * ((float)_numberOfWorks-1.0f)<<std::endl;
 	return levelsNumber;
 }
@@ -61,7 +61,7 @@ int main(int argc,char * argv){
 	std::cout<< "Program will search for files with .rcp extensions, from 1.rcp to {INDEX_YOU_SPECIFIED}.rcp file , and append TAO to the end of files, You better to backup your files first if you want to keep original files."<<std::endl;
 	std::cout << "Enter last file index(first file name supposed to be 1):";
 	std::cin >>lastFileId;
-	for(int i=1;i<=lastFileId;i++){
+	for(uint32_t i=1;i<=lastFileId;i++){
 		RCPSP rcpsp(std::to_string(i)+".rcp");
 		float TAO  = rcpsp.ComputeTAO();
 		std::ofstream rcpspFile;

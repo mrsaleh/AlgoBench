@@ -16,6 +16,15 @@ class RCPSP{
 		std::vector<std::vector<int>> m_LevelsActivities;
 		std::vector<int> m_ActivitiesLevel;
 		bool ** m_PredecessorsMatrix = nullptr;
+		int m_TotalNumberOfArcs;
+		float m_AverageOfLevelsWidths;
+		int m_NPrime;
+		//Complexity Measures
+		float m_I1;
+		float m_I2;
+		float m_I3;
+		float m_I4;
+		float m_I5;
 	private:
 	void CalculatePredecessors();
 	int GetRootActivity();
@@ -32,6 +41,16 @@ class RCPSP{
 	void GeneratePredecessorsMatrix();
 	void PrintPredecessorsMatrix();
 	float ComputeTAO();
+	void CalculateI1();
+	void CalculateI2();
+	void CalculateAverageOfLevelsWidths();
+	void CalculateI3();
+	int D();
+	void CalculateTotalNumberOfArcs();
+	int CalculateArcsWithLength(int arcLength);
+	void CalculateNPrime();
+	void CalculateI4();
+	void CalculateI5();
 	public:
 	RCPSP(std::string pattersonFilename);
 };
