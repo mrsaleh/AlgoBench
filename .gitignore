@@ -41,3 +41,5 @@
 *.lastbuildstate
 *.enc
 *.idb
+*.ipch
+**/ipch/
