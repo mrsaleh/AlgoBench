@@ -64,9 +64,24 @@ int main(int argc,char * argv){
 	for(uint32_t i=1;i<=lastFileId;i++){
 		RCPSP rcpsp(std::to_string(i)+".rcp");
 		float TAO  = rcpsp.ComputeTAO();
+		float esTAO = rcpsp.ComputeEarliestStartTAO();
 		std::ofstream rcpspFile;
 		rcpspFile.open(std::to_string(i)+".rcp",std::ios::app);
 		rcpspFile<<std::endl<<"TAO:"<<TAO;
+		rcpspFile << std::endl << "esTAO:" << esTAO;
+		//calculate I1 to I5
+		rcpsp.CalculateI1();
+		rcpsp.CalculateI2();
+		rcpsp.CalculateI3();
+		rcpsp.CalculateI4();
+		rcpsp.CalculateI5();
+		
+		rcpspFile << std::endl << "I1:" << rcpsp.I1();
+		rcpspFile << std::endl << "I2:" << rcpsp.I2();
+		rcpspFile << std::endl << "I3:" << rcpsp.I3();
+		rcpspFile << std::endl << "I4:" << rcpsp.I4();
+		rcpspFile << std::endl << "I5:" << rcpsp.I5();
+
 		rcpspFile.close();
 	}
 	return 0;
