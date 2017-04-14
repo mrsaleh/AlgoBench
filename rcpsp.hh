@@ -35,7 +35,6 @@ class RCPSP{
 		std::vector<float> m_ResourceConstrainedness;
 	private:
 	void CalculatePredecessors();
-	int GetActivityResourceConsumption(int activity,int resource);
 	std::vector<int> GetLevelActivities(int level);
 	int FindActivityRegressiveLevel(int activity);
 	void CalculateRegressiveLevels();
@@ -74,9 +73,12 @@ class RCPSP{
 	void CalculateI5();
 	void CalculateI6();
 
-	void CalculateResourceFactor();
+	float CalculateResourceFactor();
 	float CalculateResourceConstrainedness(int resource);
 	float CalculateResourceStrength(int resource);
+
+public:
+	//Static Methods
 
 	public:
 		//Public Methods
@@ -104,6 +106,11 @@ class RCPSP{
 	float I6() {
 		return this->m_I6;
 	}
+
+	int GetResourcesCount() {
+		return m_ResourcesCount;
+	}
+
 
 };
 

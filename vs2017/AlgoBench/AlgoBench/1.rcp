@@ -11,19 +11,18 @@
 5 0 1 2 1 10
 0 0 0 0 0
 
-
-
 TAO:0.5
 esTAO:0.45
 I1:8
 I2:0.571429
 I3:0.75
 I4:0.6
-I5:8.73115e-10
-TAO:0.5
-
-TAO:0.5
-
-TAO:0.5
-
-TAO:0.5
+I5:1
+I6:0
+Resource Factor:0.791667
+Resource 0 Strength:0.5
+Resource 1 Strength:inf
+Resource 2 Strength:-1
+Resource 0 Constrainedness:0.416667
+Resource 1 Constrainedness:0.4
+Resource 2 Constrainedness:0.8125

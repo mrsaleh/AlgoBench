@@ -80,10 +80,9 @@ void RCPSP::CalculatePredecessors() {
 int RCPSP::FindActivityRegressiveLevel(int activity) {
 	if (activity == this->m_ActivitiesCount - 1)
 		return this->m_ActivitiesProgressiveLevel[this->m_ActivitiesCount - 1];
-
 	int level = 0;
-	for (std::vector<int>::const_iterator successor = this->m_ActivitiesSuccessors[activity].begin(); successor != this->m_ActivitiesSuccessors[activity].end(); successor++) {
-		int level_tmp = FindActivityRegressiveLevel(*successor) - 1;
+	for (auto successor = this->m_ActivitiesSuccessors[activity].begin(); successor != this->m_ActivitiesSuccessors[activity].end(); successor++) {
+		int level_tmp = FindActivityRegressiveLevel(*successor - 1);
 		if (successor == this->m_ActivitiesSuccessors[activity].begin()) {
 			level = level_tmp;
 			continue;
@@ -92,15 +91,16 @@ int RCPSP::FindActivityRegressiveLevel(int activity) {
 			level = level_tmp;
 	}
 
-	return level;
+	return level - 1;
 
 }
 
 //
 
 void RCPSP::CalculateRegressiveLevels() {
+	this->m_ActivitiesRegressiveLevel.resize(this->m_ActivitiesCount);
 	for (int activity = 0; activity < this->m_ActivitiesCount; activity++) {
-		this->m_ActivitiesRegressiveLevel[0] = FindActivityRegressiveLevel(activity);
+		this->m_ActivitiesRegressiveLevel[activity] = FindActivityRegressiveLevel(activity);
 	}
 }
 
@@ -154,7 +154,6 @@ void RCPSP::CalculateProgressiveLevels() {
 	m_CorrectedLevelsCount = this->m_LevelsCount - 2;
 }
 
-
 RCPSP::RCPSP(std::string pattersonFilename) {
 	std::ifstream pattersonFile;
 	pattersonFile.open(pattersonFilename, std::ios::in);
@@ -205,10 +204,6 @@ RCPSP::RCPSP(std::string pattersonFilename) {
 	CalculateTotalNumberOfArcs();
 }
 
-int RCPSP::GetActivityResourceConsumption(int activity, int resource) {
-	return this->m_ActivitiesResourceConsumption[activity - 1][resource];
-}
-
 
 std::vector<int> RCPSP::GetLevelActivities(int level) {
 	return this->m_ProgressiveLevelsActivities[level];
@@ -233,7 +228,7 @@ int RCPSP::ComputeResourceConstrainednesstSpecifiedLevel(int level, int resource
 	int sigma = 0;
 	std::vector<int> activities = this->GetLevelActivities(level);
 	for (auto activity = activities.begin(); activity != activities.end(); activity++) {
-		sigma += this->GetActivityResourceConsumption(*activity, resource);
+		sigma += this->m_ActivitiesResourceConsumption[*activity-1][ resource];
 	}
 	int result = this->GetResourceStock(resource) - sigma;
 	if (result >= 0)
@@ -468,11 +463,7 @@ void RCPSP::CalculateI4() {
 		i4 = 1;
 	}
 	else {
-		i4 = static_cast<float>(this->m_NPrime - this->m_CorrectedActivitiesCount /* n */ + this->m_ProgressiveLevelsActivities[1].size())/* w1  */ / (D() - this->m_CorrectedActivitiesCount  /* w1 */ + this->m_ProgressiveLevelsActivities[1].size());
-		std::cout << "D ->" << D() << std::endl;
-		std::cout << "this->m_ProgressiveLevelsActivities[1].size() ->" << this->m_ProgressiveLevelsActivities[1].size() << std::endl;
-		std::cout << "this->m_CorrectedActivitiesCount ->" << this->m_CorrectedActivitiesCount << std::endl;
-		system("pause");
+		i4 = static_cast<float>(this->m_NPrime - this->m_CorrectedActivitiesCount /* n */ + this->m_ProgressiveLevelsActivities[1].size())/* w1  */ / (D() - this->m_CorrectedActivitiesCount  /* w1 */ + this->m_ProgressiveLevelsActivities[1].size());		
 	}
 	this->m_I4 = i4;
 }
@@ -518,25 +509,25 @@ void RCPSP::CalculateI6() {
 	}
 }
 
-void RCPSP::CalculateResourceFactor() {
+float RCPSP::CalculateResourceFactor() {
 	int sigma = 0;
 	for (int activity = 1; activity <= this->m_CorrectedActivitiesCount; activity++) {
 		for (int resource = 0; resource < this->m_ResourcesCount; resource++) {
-			if (this->GetActivityResourceConsumption(activity, resource) > 0)
+			if (this->m_ActivitiesResourceConsumption[activity] [resource] > 0)
 				sigma++;
 		}
 	}
 
-	this->m_ResourceFactor = static_cast<float>(sigma) / static_cast<float>(this->m_ResourcesCount * this->m_CorrectedActivitiesCount);
+	return static_cast<float>(sigma) / static_cast<float>(this->m_ResourcesCount * this->m_CorrectedActivitiesCount);
 }
 
 
 float RCPSP::CalculateResourceConstrainedness(int resource) {
 	float sigma = 0;
-	int requiredActivities = 1;
+	int requiredActivities = 0;
 	for (int activity = 1; activity <= this->m_CorrectedActivitiesCount; activity++) {
-		if (this->GetActivityResourceConsumption(activity, resource) > 0) {
-			sigma += this->GetActivityResourceConsumption(activity, resource);
+		if (m_ActivitiesResourceConsumption[activity] [resource] > 0) {
+			sigma += m_ActivitiesResourceConsumption[activity][ resource];
 			requiredActivities++;
 		}
 	}
@@ -547,14 +538,20 @@ float RCPSP::CalculateResourceStrength(int resource) {
 	//Calculating Rk min
 	int rkmin = 0;
 	for (int activity = 1; activity <= this->m_CorrectedActivitiesCount; activity++) {
-		if (GetActivityResourceConsumption(activity, resource) > rkmin)
-			rkmin = GetActivityResourceConsumption(activity, resource);
+		if (m_ActivitiesResourceConsumption[activity][ resource] > rkmin)
+			rkmin = m_ActivitiesResourceConsumption[activity][resource];
 	}
 	//Calculate Rk max
 	int rkmax = 0;
 	for (int time = 0; time <= this->GetProjectDuration(); time++) {
-		if (ComputeResourceConstrainednesstSpecifiedTime(time, resource) > rkmax)
-			rkmax = ComputeResourceConstrainednesstSpecifiedTime(time, resource);
+		int sigma = 0;
+		for (int activity = 0; activity < this->m_ActivitiesCount; activity++) {
+			if (this->m_ActivitiesEarliestStart[activity] <= time &&  time < this->m_ActivitiesEarliestStart[activity] + this->m_ActivitiesDuration[activity]) {
+				sigma += this->m_ActivitiesResourceConsumption[activity][resource];
+			}
+		}
+		if (sigma > rkmax)
+			rkmax = sigma;
 	}
 	return (static_cast<float>(this->m_ResourcesStock[resource]) - static_cast<float>(rkmin)) / (static_cast<float>(rkmax) - static_cast<float>(rkmin));
 }
@@ -563,18 +560,45 @@ float random() {
 	return (static_cast<float>(rand()) / static_cast<float>(RAND_MAX));
 }
 
-std::vector<int> RandomSelect(std::vector<int> set, int count) {
-	std::vector<int> result;	
-	
+std::vector<int> RandomSelectSet(std::vector<int> set, int count) {
+	std::vector<int> result;
+
 	for (int i = 0; i < count; i++) {
 		int randomItem = random() * set.size();
-		result.push_back(set.at(randomItem));	
+		result.push_back(set.at(randomItem));
 		set.erase(set.begin() + randomItem);
 	}
 	return result;
 }
 
+template<typename T>
+T RandomSelect(std::vector<T> set) {
+	int randomItem = random() * set.size();
+	T result = set.at(randomItem);
+	return result;
+}
 
+class PrecedenceMatrix {
+private:
+	std::vector<std::vector<int>> m_ActivitiesPredecessors;
+	int m_ActivitiesCount;
+public:
+	PrecedenceMatrix(int activities_count) {
+		for (int activity = activities_count - 1; activity >= 0; activity--) {
+			for (int predecessor = 0; predecessor < activity; predecessor++) {
+				m_ActivitiesPredecessors[activity].push_back(predecessor);
+			}
+		}
+	}
 
-
-
+	void RandomReduction() {
+		std::vector<int> activitiesThatHasEdge;
+		for (int activity = 1; activity <= m_ActivitiesCount - 2; activity++) {
+			if (m_ActivitiesPredecessors[activity].size() > 0)
+				activitiesThatHasEdge.push_back(activity);
+		}
+		int randomActivity = RandomSelect<int>(activitiesThatHasEdge);
+		int randomActivityPredecessorIndex = random() * m_ActivitiesPredecessors[randomActivity].size();
+		m_ActivitiesPredecessors[randomActivity].erase(m_ActivitiesPredecessors[randomActivity].begin() + randomActivityPredecessorIndex);
+	}
+};
