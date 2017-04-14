@@ -23,13 +23,16 @@ class RCPSP{
 		int m_TotalNumberOfArcs;
 		float m_AverageOfLevelsWidths;
 		int m_NPrime;
-		//Complexity Measures
+		//Topological Complexity Measures
 		float m_I1;
 		float m_I2;
 		float m_I3;
 		float m_I4;
 		float m_I5;
-		float m_I6;
+		float m_I6; 
+		//Resource-Wise Complexity Measures
+		float m_ResourceFactor;
+		std::vector<float> m_ResourceConstrainedness;
 	private:
 	void CalculatePredecessors();
 	int GetActivityResourceConsumption(int activity,int resource);
@@ -70,7 +73,13 @@ class RCPSP{
 	void CalculateI4();
 	void CalculateI5();
 	void CalculateI6();
+
+	void CalculateResourceFactor();
+	float CalculateResourceConstrainedness(int resource);
+	float CalculateResourceStrength(int resource);
+
 	public:
+		//Public Methods
 	RCPSP(std::string pattersonFilename);
 	float I1() {
 		return this->m_I1;

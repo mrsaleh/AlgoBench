@@ -83,7 +83,7 @@ int RCPSP::FindActivityRegressiveLevel(int activity) {
 
 	int level = 0;
 	for (std::vector<int>::const_iterator successor = this->m_ActivitiesSuccessors[activity].begin(); successor != this->m_ActivitiesSuccessors[activity].end(); successor++) {
-		int level_tmp = FindActivityRegressiveLevel(*successor)- 1;
+		int level_tmp = FindActivityRegressiveLevel(*successor) - 1;
 		if (successor == this->m_ActivitiesSuccessors[activity].begin()) {
 			level = level_tmp;
 			continue;
@@ -514,7 +514,67 @@ void RCPSP::CalculateI6() {
 		for (int activity = 1; activity <= this->m_CorrectedActivitiesCount; activity++) {
 			sigma += this->m_ActivitiesRegressiveLevel[activity] - this->m_ActivitiesProgressiveLevel[activity];
 		}
-		this->m_I6 = static_cast<float>(sigma)  / static_cast<float>( (this->m_CorrectedLevelsCount - 1) * (this->m_CorrectedActivitiesCount - this->m_CorrectedLevelsCount));		
+		this->m_I6 = static_cast<float>(sigma) / static_cast<float>((this->m_CorrectedLevelsCount - 1) * (this->m_CorrectedActivitiesCount - this->m_CorrectedLevelsCount));
 	}
 }
+
+void RCPSP::CalculateResourceFactor() {
+	int sigma = 0;
+	for (int activity = 1; activity <= this->m_CorrectedActivitiesCount; activity++) {
+		for (int resource = 0; resource < this->m_ResourcesCount; resource++) {
+			if (this->GetActivityResourceConsumption(activity, resource) > 0)
+				sigma++;
+		}
+	}
+
+	this->m_ResourceFactor = static_cast<float>(sigma) / static_cast<float>(this->m_ResourcesCount * this->m_CorrectedActivitiesCount);
+}
+
+
+float RCPSP::CalculateResourceConstrainedness(int resource) {
+	float sigma = 0;
+	int requiredActivities = 1;
+	for (int activity = 1; activity <= this->m_CorrectedActivitiesCount; activity++) {
+		if (this->GetActivityResourceConsumption(activity, resource) > 0) {
+			sigma += this->GetActivityResourceConsumption(activity, resource);
+			requiredActivities++;
+		}
+	}
+	return (static_cast<float>(sigma) / static_cast<float>(requiredActivities)) / static_cast<float>(this->m_ResourcesStock[resource]);
+}
+
+float RCPSP::CalculateResourceStrength(int resource) {
+	//Calculating Rk min
+	int rkmin = 0;
+	for (int activity = 1; activity <= this->m_CorrectedActivitiesCount; activity++) {
+		if (GetActivityResourceConsumption(activity, resource) > rkmin)
+			rkmin = GetActivityResourceConsumption(activity, resource);
+	}
+	//Calculate Rk max
+	int rkmax = 0;
+	for (int time = 0; time <= this->GetProjectDuration(); time++) {
+		if (ComputeResourceConstrainednesstSpecifiedTime(time, resource) > rkmax)
+			rkmax = ComputeResourceConstrainednesstSpecifiedTime(time, resource);
+	}
+	return (static_cast<float>(this->m_ResourcesStock[resource]) - static_cast<float>(rkmin)) / (static_cast<float>(rkmax) - static_cast<float>(rkmin));
+}
+
+float random() {
+	return (static_cast<float>(rand()) / static_cast<float>(RAND_MAX));
+}
+
+std::vector<int> RandomSelect(std::vector<int> set, int count) {
+	std::vector<int> result;	
+	
+	for (int i = 0; i < count; i++) {
+		int randomItem = random() * set.size();
+		result.push_back(set.at(randomItem));	
+		set.erase(set.begin() + randomItem);
+	}
+	return result;
+}
+
+
+
+
 
