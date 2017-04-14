@@ -75,12 +75,14 @@ int main(int argc,char * argv){
 		rcpsp.CalculateI3();
 		rcpsp.CalculateI4();
 		rcpsp.CalculateI5();
+		rcpsp.CalculateI6();
 		
 		rcpspFile << std::endl << "I1:" << rcpsp.I1();
 		rcpspFile << std::endl << "I2:" << rcpsp.I2();
 		rcpspFile << std::endl << "I3:" << rcpsp.I3();
 		rcpspFile << std::endl << "I4:" << rcpsp.I4();
 		rcpspFile << std::endl << "I5:" << rcpsp.I5();
+		rcpspFile << std::endl << "I6:" << rcpsp.I6();
 
 		rcpspFile.close();
 	}

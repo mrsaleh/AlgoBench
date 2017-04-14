@@ -77,59 +77,78 @@ void RCPSP::CalculatePredecessors() {
 	}
 }
 
-int RCPSP::GetRootActivity() {
-	int i = 0;
-	for (auto predecessors = this->m_ActivitiesPredecessors.begin(); predecessors != this->m_ActivitiesPredecessors.end(); predecessors++) {
-		i++;
-		if (predecessors->size() == 0)
-			return i;
+int RCPSP::FindActivityRegressiveLevel(int activity) {
+	if (activity == this->m_ActivitiesCount - 1)
+		return this->m_ActivitiesProgressiveLevel[this->m_ActivitiesCount - 1];
+
+	int level = 0;
+	for (std::vector<int>::const_iterator successor = this->m_ActivitiesSuccessors[activity].begin(); successor != this->m_ActivitiesSuccessors[activity].end(); successor++) {
+		int level_tmp = FindActivityRegressiveLevel(*successor)- 1;
+		if (successor == this->m_ActivitiesSuccessors[activity].begin()) {
+			level = level_tmp;
+			continue;
+		}
+		if (level_tmp < level)
+			level = level_tmp;
 	}
-	return -1;
+
+	return level;
+
 }
 
-int RCPSP::FindActivityLevel(int activity) {
+//
+
+void RCPSP::CalculateRegressiveLevels() {
+	for (int activity = 0; activity < this->m_ActivitiesCount; activity++) {
+		this->m_ActivitiesRegressiveLevel[0] = FindActivityRegressiveLevel(activity);
+	}
+}
+
+//Calculate Progressive Level
+
+int RCPSP::FindActivityProgressiveLevel(int activity) {
 	int level = 0;
 	for (std::vector<int>::const_iterator predecessor = this->m_ActivitiesPredecessors[activity - 1].begin(); predecessor != this->m_ActivitiesPredecessors[activity - 1].end(); predecessor++) {
-		if (this->m_ActivitiesLevel[(*predecessor) - 1] == -1)
+		if (this->m_ActivitiesProgressiveLevel[(*predecessor) - 1] == -1)
 			return -1;
-		int levelOfPredecessorActivity = this->m_ActivitiesLevel[(*predecessor) - 1];
+		int levelOfPredecessorActivity = this->m_ActivitiesProgressiveLevel[(*predecessor) - 1];
 		if (levelOfPredecessorActivity + 1 > level)
 			level = levelOfPredecessorActivity + 1;
 	}
 	return level;
 }
 
-void RCPSP::CalculateLevels() {
-	this->m_ActivitiesLevel = std::vector<int>(this->m_ActivitiesCount, -1);
+void RCPSP::CalculateProgressiveLevels() {
+	this->m_ActivitiesProgressiveLevel = std::vector<int>(this->m_ActivitiesCount, -1);
 
 	//Find each activity level
 	bool reset = false;
 	int activity = 1;
-	std::vector<int>::iterator activityLevel = this->m_ActivitiesLevel.begin();
+	std::vector<int>::iterator activityLevel = this->m_ActivitiesProgressiveLevel.begin();
 	do {
 		reset = false;
 		activity = 1;
-		activityLevel = this->m_ActivitiesLevel.begin();
-		for (; activityLevel != this->m_ActivitiesLevel.end(); activityLevel++, activity++) {
+		activityLevel = this->m_ActivitiesProgressiveLevel.begin();
+		for (; activityLevel != this->m_ActivitiesProgressiveLevel.end(); activityLevel++, activity++) {
 			if (*activityLevel != -1)
 				continue;
-			*activityLevel = FindActivityLevel(activity);
+			*activityLevel = FindActivityProgressiveLevel(activity);
 			if (*activityLevel == -1) {
 				reset = true;
 			}
 		}
 	} while (reset);
 
-	for (auto activityLevel = this->m_ActivitiesLevel.begin(); activityLevel != this->m_ActivitiesLevel.end(); activityLevel++) {
+	for (auto activityLevel = this->m_ActivitiesProgressiveLevel.begin(); activityLevel != this->m_ActivitiesProgressiveLevel.end(); activityLevel++) {
 		if (this->m_LevelsCount < *activityLevel + 1) {
 			this->m_LevelsCount = *activityLevel + 1;
 		}
 	}
 	//Categorizing activities by level
-	this->m_LevelsActivities.resize(this->m_LevelsCount);
+	this->m_ProgressiveLevelsActivities.resize(this->m_LevelsCount);
 	activity = 1;
-	for (std::vector<int>::const_iterator activityLevel = this->m_ActivitiesLevel.begin(); activityLevel != this->m_ActivitiesLevel.end(); activity++, activityLevel++) {
-		this->m_LevelsActivities[(*activityLevel)].push_back(activity);
+	for (std::vector<int>::const_iterator activityLevel = this->m_ActivitiesProgressiveLevel.begin(); activityLevel != this->m_ActivitiesProgressiveLevel.end(); activity++, activityLevel++) {
+		this->m_ProgressiveLevelsActivities[(*activityLevel)].push_back(activity);
 	}
 	//levels count used in fomula is without first and last nodes
 	m_CorrectedLevelsCount = this->m_LevelsCount - 2;
@@ -175,7 +194,9 @@ RCPSP::RCPSP(std::string pattersonFilename) {
 	m_CorrectedActivitiesCount = m_ActivitiesCount - 2; // ActivitiesCount used in formula is without first and last dummy nodes
 
 	CalculatePredecessors();
-	CalculateLevels();
+	CalculateProgressiveLevels();
+	//Regressive levels calculation require progressive levels calculation
+	CalculateRegressiveLevels();
 	CalculateActivitiesEearliestStartRecursive();
 	GeneratePredecessorsMatrix();
 	//Values required for I1 to I6 indicators
@@ -190,7 +211,7 @@ int RCPSP::GetActivityResourceConsumption(int activity, int resource) {
 
 
 std::vector<int> RCPSP::GetLevelActivities(int level) {
-	return this->m_LevelsActivities[level];
+	return this->m_ProgressiveLevelsActivities[level];
 }
 
 
@@ -249,16 +270,6 @@ float RCPSP::ComputeTAO() {
 	}
 	return sigma / keiP;
 }
-
-/*
-findes(int activity){
-	if(activity==0)
-		return activities_duration[0];
-	else
-	return sum(findes(predecessors))
-}
-
-*/
 
 int RCPSP::FindActivityEarliestFinishRecursive(int activity) {
 
@@ -389,7 +400,7 @@ void RCPSP::CalculateAverageOfLevelsWidths() {
 	this->m_AverageOfLevelsWidths = 0;
 	int sigma = 0;
 	for (int level = 1; level <= this->m_CorrectedLevelsCount; level++) {
-		sigma += this->m_LevelsActivities[level].size();
+		sigma += this->m_ProgressiveLevelsActivities[level].size();
 	}
 	this->m_AverageOfLevelsWidths = static_cast<float>(sigma) / this->m_CorrectedLevelsCount;
 }
@@ -407,7 +418,7 @@ void RCPSP::CalculateI3() {
 	else {
 		for (int level = 1; level <= this->m_CorrectedLevelsCount; level++) {
 			//notice that we minus activities count with 2 to remove virtual nodes effect (begin node and end node)
-			sigma += abs((this->m_LevelsActivities[level].size()) /* W(a) */ - this->m_AverageOfLevelsWidths) /*W_bar*/;
+			sigma += abs((this->m_ProgressiveLevelsActivities[level].size()) /* W(a) */ - this->m_AverageOfLevelsWidths) /*W_bar*/;
 		}
 		this->m_I3 = static_cast<float>(sigma) / static_cast<float>(2 * (this->m_CorrectedLevelsCount - 1) * (this->m_AverageOfLevelsWidths - 1));
 	}
@@ -419,7 +430,7 @@ void RCPSP::CalculateI3() {
 int RCPSP::D() {
 	int sigma = 0;
 	for (int level = 1; level <= this->m_CorrectedLevelsCount - 1; level++) {
-		sigma += (this->m_LevelsActivities[level].size()) * (this->m_LevelsActivities[level + 1].size());
+		sigma += (this->m_ProgressiveLevelsActivities[level].size()) * (this->m_ProgressiveLevelsActivities[level + 1].size());
 	}
 	return sigma;
 }
@@ -429,9 +440,9 @@ int RCPSP::D() {
 int RCPSP::CalculateArcsWithLength(int arcLength) {
 	int arcCount = 0;
 	for (int activity = 1; activity <= this->m_CorrectedActivitiesCount - 1; activity++) {
-		int activityLevel = this->m_ActivitiesLevel[activity];
+		int activityLevel = this->m_ActivitiesProgressiveLevel[activity];
 		for (auto successor = this->m_ActivitiesSuccessors[activity].begin(); successor != this->m_ActivitiesSuccessors[activity].end(); successor++) {
-			int successorLevel = this->m_ActivitiesLevel[*successor - 1];
+			int successorLevel = this->m_ActivitiesProgressiveLevel[*successor - 1];
 			if (successorLevel - activityLevel == arcLength) {
 				arcCount++;
 			}
@@ -444,24 +455,22 @@ void RCPSP::CalculateNPrime() {
 	this->m_NPrime = CalculateArcsWithLength(1);
 }
 
-
-
 //Short arc indicator
 //n is activities count
 void RCPSP::CalculateI4() {
 
 	float i4 = 0;
-	auto w1 = this->m_ActivitiesLevel[1];
+	auto w1 = this->m_ActivitiesProgressiveLevel[1];
 	// 1 if D = n - w1
 	//else
 	// (n_prime -  n + w1) / (D - n + w1)
-	if (D() == this->m_CorrectedActivitiesCount - this->m_LevelsActivities[1].size()/* w1  */) {
+	if (D() == this->m_CorrectedActivitiesCount - this->m_ProgressiveLevelsActivities[1].size()/* w1  */) {
 		i4 = 1;
 	}
 	else {
-		i4 = static_cast<float>(this->m_NPrime - this->m_CorrectedActivitiesCount /* n */ + this->m_LevelsActivities[1].size())/* w1  */ / (D() - this->m_CorrectedActivitiesCount  /* w1 */ + this->m_LevelsActivities[1].size());
+		i4 = static_cast<float>(this->m_NPrime - this->m_CorrectedActivitiesCount /* n */ + this->m_ProgressiveLevelsActivities[1].size())/* w1  */ / (D() - this->m_CorrectedActivitiesCount  /* w1 */ + this->m_ProgressiveLevelsActivities[1].size());
 		std::cout << "D ->" << D() << std::endl;
-		std::cout << "this->m_LevelsActivities[1].size() ->" << this->m_LevelsActivities[1].size() << std::endl;
+		std::cout << "this->m_ProgressiveLevelsActivities[1].size() ->" << this->m_ProgressiveLevelsActivities[1].size() << std::endl;
 		std::cout << "this->m_CorrectedActivitiesCount ->" << this->m_CorrectedActivitiesCount << std::endl;
 		system("pause");
 	}
@@ -471,10 +480,10 @@ void RCPSP::CalculateI4() {
 /* |A| is total number of arcs*/
 void RCPSP::CalculateTotalNumberOfArcs() {
 	int a = 0;
-	
+
 	for (int activity = 1; activity <= this->m_CorrectedActivitiesCount; activity++) {
 		for (auto predecessor = this->m_ActivitiesPredecessors[activity].begin(); predecessor != this->m_ActivitiesPredecessors[activity].end(); predecessor++) {
-			if (*predecessor == 1 )
+			if (*predecessor == 1)
 				continue;
 			a++;
 		}
@@ -493,8 +502,19 @@ void RCPSP::CalculateI5() {
 	for (int level = 1; level < this->m_CorrectedLevelsCount - 1; level++) {
 		sigma += (CalculateArcsWithLength(level) * (this->m_CorrectedLevelsCount - level - 1)) / (this->m_CorrectedLevelsCount - 2);
 	}
-	sigma += -this->m_CorrectedActivitiesCount + this->m_LevelsActivities[1].size();
-	this->m_I5 = sigma / static_cast<float>(this->m_TotalNumberOfArcs - this->m_CorrectedActivitiesCount + this->m_LevelsActivities[1].size());
+	sigma += -this->m_CorrectedActivitiesCount + this->m_ProgressiveLevelsActivities[1].size();
+	this->m_I5 = sigma / static_cast<float>(this->m_TotalNumberOfArcs - this->m_CorrectedActivitiesCount + this->m_ProgressiveLevelsActivities[1].size());
 }
 
+void RCPSP::CalculateI6() {
+	if (this->m_CorrectedLevelsCount == 1 || this->m_CorrectedLevelsCount == this->m_CorrectedActivitiesCount)
+		this->m_I6 = 0;
+	else {
+		int sigma = 0;
+		for (int activity = 1; activity <= this->m_CorrectedActivitiesCount; activity++) {
+			sigma += this->m_ActivitiesRegressiveLevel[activity] - this->m_ActivitiesProgressiveLevel[activity];
+		}
+		this->m_I6 = static_cast<float>(sigma)  / static_cast<float>( (this->m_CorrectedLevelsCount - 1) * (this->m_CorrectedActivitiesCount - this->m_CorrectedLevelsCount));		
+	}
+}
 

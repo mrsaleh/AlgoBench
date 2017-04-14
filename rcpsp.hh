@@ -15,8 +15,9 @@ class RCPSP{
 		std::vector<std::vector<int>> m_ActivitiesSuccessors;
 		std::vector<std::vector<int>> m_ActivitiesPredecessors;
 		std::vector<std::vector<int>> m_ActivitiesResourceConsumption;
-		std::vector<std::vector<int>> m_LevelsActivities;
-		std::vector<int> m_ActivitiesLevel;
+		std::vector<std::vector<int>> m_ProgressiveLevelsActivities;
+		std::vector<int> m_ActivitiesRegressiveLevel;
+		std::vector<int> m_ActivitiesProgressiveLevel;
 		std::vector<int> m_ActivitiesEarliestStart;
 		bool ** m_PredecessorsMatrix = nullptr;
 		int m_TotalNumberOfArcs;
@@ -28,17 +29,19 @@ class RCPSP{
 		float m_I3;
 		float m_I4;
 		float m_I5;
+		float m_I6;
 	private:
 	void CalculatePredecessors();
-	int GetRootActivity();
 	int GetActivityResourceConsumption(int activity,int resource);
 	std::vector<int> GetLevelActivities(int level);
+	int FindActivityRegressiveLevel(int activity);
+	void CalculateRegressiveLevels();
 	int GetResourceStock(int resource);
 	int ComputeResourceConstrainednesstSpecifiedLevel(int level,int resource);
 	float ComputeEta(int resource);
 	float sgn(float num);
-	int FindActivityLevel(int activity);
-	void CalculateLevels();
+	int FindActivityProgressiveLevel(int activity);
+	void CalculateProgressiveLevels();
 	public:
 	void GeneratePredecessorsMatrix();
 	void PrintPredecessorsMatrix();
@@ -66,6 +69,7 @@ class RCPSP{
 	void CalculateNPrime();
 	void CalculateI4();
 	void CalculateI5();
+	void CalculateI6();
 	public:
 	RCPSP(std::string pattersonFilename);
 	float I1() {
@@ -86,6 +90,10 @@ class RCPSP{
 
 	float I5() {
 		return this->m_I5;
+	}
+
+	float I6() {
+		return this->m_I6;
 	}
 
 };
