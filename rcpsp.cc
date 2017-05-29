@@ -284,6 +284,7 @@ int RCPSP::FindActivityEarliestFinishRecursive(int activity) {
 	}
 }
 
+
 void RCPSP::CalculateActivitiesEearliestStartRecursive() {
 	this->m_ActivitiesEarliestStart.resize(this->m_ActivitiesCount, -1);
 
@@ -291,6 +292,35 @@ void RCPSP::CalculateActivitiesEearliestStartRecursive() {
 		this->m_ActivitiesEarliestStart[activity - 1] = FindActivityEarliestFinishRecursive(activity) - this->m_ActivitiesDuration[activity - 1];
 	}
 }
+
+int RCPSP::FindActivityLatestFinishRecursive(int activity) {
+
+
+	if (activity == this->m_ActivitiesCount-1) {
+		return (FindActivityEarliestFinishRecursive(activity));
+	}
+	else {
+		//Find min of successors duration
+		int min = FindActivityEarliestFinishRecursive(this->m_ActivitiesCount - 1);
+		for (auto successor = m_ActivitiesSuccessors[activity - 1].begin(); successor != m_ActivitiesSuccessors[activity - 1].end(); successor++) {
+			int lf = FindActivityLatestFinishRecursive(*successor) - this->m_ActivitiesDuration[activity - 1];
+			if (lf < min)
+				min = lf;
+		}
+		return min;
+	}
+}
+
+void RCPSP::CalculateActivitiesLatestStartRecursive() {
+	this->m_ActivitiesLatestStart.resize(this->m_ActivitiesCount, -1);
+
+	for (int activity = 1; activity <= this->m_ActivitiesCount; activity++) {
+		this->m_ActivitiesLatestStart[activity - 1] = FindActivityLatestFinishRecursive(activity) - this->m_ActivitiesDuration[activity - 1];
+	}
+}
+
+
+
 
 //Calculate ES for activities
 

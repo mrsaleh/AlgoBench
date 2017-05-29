@@ -19,6 +19,7 @@ class RCPSP{
 		std::vector<int> m_ActivitiesRegressiveLevel;
 		std::vector<int> m_ActivitiesProgressiveLevel;
 		std::vector<int> m_ActivitiesEarliestStart;
+		std::vector<int>  m_ActivitiesLatestStart;
 		bool ** m_PredecessorsMatrix = nullptr;
 		int m_TotalNumberOfArcs;
 		float m_AverageOfLevelsWidths;
@@ -47,6 +48,9 @@ class RCPSP{
 	//Recursive Solution to find es
 	int FindActivityEarliestFinishRecursive(int activity);
 	void CalculateActivitiesEearliestStartRecursive();
+	//Recursive Soution to find ls
+	int FindActivityLatestFinishRecursive(int activity);
+	void CalculateActivitiesLatestStartRecursive();
 	//Non-Recursive Solution to find es
 	int FindActivityEearliestStart(int activity);
 	int GetProjectDuration();
