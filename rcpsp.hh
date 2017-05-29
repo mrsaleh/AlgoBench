@@ -23,13 +23,8 @@ class RCPSP{
 		int m_TotalNumberOfArcs;
 		float m_AverageOfLevelsWidths;
 		int m_NPrime;
-		//Topological Complexity Measures
-		float m_I1;
-		float m_I2;
-		float m_I3;
-		float m_I4;
-		float m_I5;
-		float m_I6; 
+		//Topological Complexity Measures (I1 to I6)
+		
 		//Resource-Wise Complexity Measures
 		float m_ResourceFactor;
 		std::vector<float> m_ResourceConstrainedness;
@@ -61,17 +56,17 @@ class RCPSP{
 	float ComputeEarliestStartTAO();
 	//Compelxity Measures related functions
 
-	void CalculateI1();
-	void CalculateI2();
+	float I1();
+	float I2();
 	void CalculateAverageOfLevelsWidths();
-	void CalculateI3();
+	float I3();
 	int D();
 	void CalculateTotalNumberOfArcs();
 	int CalculateArcsWithLength(int arcLength);
 	void CalculateNPrime();
-	void CalculateI4();
-	void CalculateI5();
-	void CalculateI6();
+	float I4();
+	float I5();
+	float I6();
 
 	float CalculateResourceFactor();
 	float CalculateResourceConstrainedness(int resource);
@@ -82,34 +77,13 @@ public:
 
 	public:
 		//Public Methods
-	RCPSP(std::string pattersonFilename);
-	float I1() {
-		return this->m_I1;
-	}
-
-	float I2() {
-		return this->m_I2;
-	}
-
-	float I3() {
-		return this->m_I3;
-	}
-
-	float I4() {
-		return this->m_I4;
-	}
-
-	float I5() {
-		return this->m_I5;
-	}
-
-	float I6() {
-		return this->m_I6;
-	}
+	RCPSP(std::string pattersonFilename);	
 
 	int GetResourcesCount() {
 		return m_ResourcesCount;
 	}
+
+	void SaveToCPlexFile(std::string filename);
 
 
 };

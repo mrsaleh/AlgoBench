@@ -70,12 +70,6 @@ int main(int argc, char * argv) {
 		rcpspFile << std::endl << "TAO:" << TAO;
 		rcpspFile << std::endl << "esTAO:" << esTAO;
 		//calculate I1 to I5
-		rcpsp.CalculateI1();
-		rcpsp.CalculateI2();
-		rcpsp.CalculateI3();
-		rcpsp.CalculateI4();
-		rcpsp.CalculateI5();
-		rcpsp.CalculateI6();
 
 		rcpspFile << std::endl << "I1:" << rcpsp.I1();
 		rcpspFile << std::endl << "I2:" << rcpsp.I2();

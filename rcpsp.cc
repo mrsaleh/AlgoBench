@@ -228,7 +228,7 @@ int RCPSP::ComputeResourceConstrainednesstSpecifiedLevel(int level, int resource
 	int sigma = 0;
 	std::vector<int> activities = this->GetLevelActivities(level);
 	for (auto activity = activities.begin(); activity != activities.end(); activity++) {
-		sigma += this->m_ActivitiesResourceConsumption[*activity-1][ resource];
+		sigma += this->m_ActivitiesResourceConsumption[*activity - 1][resource];
 	}
 	int result = this->GetResourceStock(resource) - sigma;
 	if (result >= 0)
@@ -375,18 +375,17 @@ float RCPSP::ComputeEarliestStartTAO() {
 }
 
 //Network size indicator
-void RCPSP::CalculateI1() {
-	this->m_I1 = static_cast<float>(this->m_CorrectedActivitiesCount);
+float RCPSP::I1() {
+	return static_cast<float>(this->m_CorrectedActivitiesCount);
 }
 
 //Serial or parallel indicator
-void RCPSP::CalculateI2() {
+float RCPSP::I2() {
 	if (this->m_CorrectedActivitiesCount == 1)
-		this->m_I2 = 1;
+		return 1;
 	else {
-		this->m_I2 = static_cast<float>(this->m_CorrectedLevelsCount - 1) / static_cast<float>(this->m_CorrectedActivitiesCount - 1);
+		return static_cast<float>(this->m_CorrectedLevelsCount - 1) / static_cast<float>(this->m_CorrectedActivitiesCount - 1);
 	}
-
 }
 
 
@@ -406,16 +405,16 @@ void RCPSP::CalculateAverageOfLevelsWidths() {
 // a is level
 // (Sigma(a=1,m)(|W(a) - W_bar|)) / (2 * (m-1) * (W_bar - 1))
 //notice that we don't count begin and end node in folmula
-void RCPSP::CalculateI3() {
+float RCPSP::I3() {
 	float sigma = 0;
 	if (this->m_LevelsCount == 1 || this->m_LevelsCount == this->m_ActivitiesCount - 2)
-		this->m_I3 = 0;
+		return 0;
 	else {
 		for (int level = 1; level <= this->m_CorrectedLevelsCount; level++) {
 			//notice that we minus activities count with 2 to remove virtual nodes effect (begin node and end node)
 			sigma += abs((this->m_ProgressiveLevelsActivities[level].size()) /* W(a) */ - this->m_AverageOfLevelsWidths) /*W_bar*/;
 		}
-		this->m_I3 = static_cast<float>(sigma) / static_cast<float>(2 * (this->m_CorrectedLevelsCount - 1) * (this->m_AverageOfLevelsWidths - 1));
+		return static_cast<float>(sigma) / static_cast<float>(2 * (this->m_CorrectedLevelsCount - 1) * (this->m_AverageOfLevelsWidths - 1));
 	}
 }
 
@@ -452,7 +451,7 @@ void RCPSP::CalculateNPrime() {
 
 //Short arc indicator
 //n is activities count
-void RCPSP::CalculateI4() {
+float RCPSP::I4() {
 
 	float i4 = 0;
 	auto w1 = this->m_ActivitiesProgressiveLevel[1];
@@ -463,9 +462,9 @@ void RCPSP::CalculateI4() {
 		i4 = 1;
 	}
 	else {
-		i4 = static_cast<float>(this->m_NPrime - this->m_CorrectedActivitiesCount /* n */ + this->m_ProgressiveLevelsActivities[1].size())/* w1  */ / (D() - this->m_CorrectedActivitiesCount  /* w1 */ + this->m_ProgressiveLevelsActivities[1].size());		
+		i4 = static_cast<float>(this->m_NPrime - this->m_CorrectedActivitiesCount /* n */ + this->m_ProgressiveLevelsActivities[1].size())/* w1  */ / (D() - this->m_CorrectedActivitiesCount  /* w1 */ + this->m_ProgressiveLevelsActivities[1].size());
 	}
-	this->m_I4 = i4;
+	return  i4;
 }
 
 /* |A| is total number of arcs*/
@@ -487,25 +486,25 @@ void RCPSP::CalculateTotalNumberOfArcs() {
 //w1 is width of level one
 //m is levels count
 //Resource Constrained Project Scheduling Problem
-void RCPSP::CalculateI5() {
+float RCPSP::I5() {
 	//1 if |A| = n - w1
 	int sigma = 0;
 	for (int level = 1; level < this->m_CorrectedLevelsCount - 1; level++) {
 		sigma += (CalculateArcsWithLength(level) * (this->m_CorrectedLevelsCount - level - 1)) / (this->m_CorrectedLevelsCount - 2);
 	}
 	sigma += -this->m_CorrectedActivitiesCount + this->m_ProgressiveLevelsActivities[1].size();
-	this->m_I5 = sigma / static_cast<float>(this->m_TotalNumberOfArcs - this->m_CorrectedActivitiesCount + this->m_ProgressiveLevelsActivities[1].size());
+	return ( sigma / static_cast<float>(this->m_TotalNumberOfArcs - this->m_CorrectedActivitiesCount + this->m_ProgressiveLevelsActivities[1].size()));
 }
 
-void RCPSP::CalculateI6() {
+float RCPSP::I6() {
 	if (this->m_CorrectedLevelsCount == 1 || this->m_CorrectedLevelsCount == this->m_CorrectedActivitiesCount)
-		this->m_I6 = 0;
+		return 0;
 	else {
 		int sigma = 0;
 		for (int activity = 1; activity <= this->m_CorrectedActivitiesCount; activity++) {
 			sigma += this->m_ActivitiesRegressiveLevel[activity] - this->m_ActivitiesProgressiveLevel[activity];
 		}
-		this->m_I6 = static_cast<float>(sigma) / static_cast<float>((this->m_CorrectedLevelsCount - 1) * (this->m_CorrectedActivitiesCount - this->m_CorrectedLevelsCount));
+		return static_cast<float>(sigma) / static_cast<float>((this->m_CorrectedLevelsCount - 1) * (this->m_CorrectedActivitiesCount - this->m_CorrectedLevelsCount));
 	}
 }
 
@@ -513,7 +512,7 @@ float RCPSP::CalculateResourceFactor() {
 	int sigma = 0;
 	for (int activity = 1; activity <= this->m_CorrectedActivitiesCount; activity++) {
 		for (int resource = 0; resource < this->m_ResourcesCount; resource++) {
-			if (this->m_ActivitiesResourceConsumption[activity] [resource] > 0)
+			if (this->m_ActivitiesResourceConsumption[activity][resource] > 0)
 				sigma++;
 		}
 	}
@@ -526,8 +525,8 @@ float RCPSP::CalculateResourceConstrainedness(int resource) {
 	float sigma = 0;
 	int requiredActivities = 0;
 	for (int activity = 1; activity <= this->m_CorrectedActivitiesCount; activity++) {
-		if (m_ActivitiesResourceConsumption[activity] [resource] > 0) {
-			sigma += m_ActivitiesResourceConsumption[activity][ resource];
+		if (m_ActivitiesResourceConsumption[activity][resource] > 0) {
+			sigma += m_ActivitiesResourceConsumption[activity][resource];
 			requiredActivities++;
 		}
 	}
@@ -538,7 +537,7 @@ float RCPSP::CalculateResourceStrength(int resource) {
 	//Calculating Rk min
 	int rkmin = 0;
 	for (int activity = 1; activity <= this->m_CorrectedActivitiesCount; activity++) {
-		if (m_ActivitiesResourceConsumption[activity][ resource] > rkmin)
+		if (m_ActivitiesResourceConsumption[activity][resource] > rkmin)
 			rkmin = m_ActivitiesResourceConsumption[activity][resource];
 	}
 	//Calculate Rk max
@@ -584,6 +583,7 @@ private:
 	int m_ActivitiesCount;
 public:
 	PrecedenceMatrix(int activities_count) {
+		m_ActivitiesPredecessors.resize(activities_count);
 		for (int activity = activities_count - 1; activity >= 0; activity--) {
 			for (int predecessor = 0; predecessor < activity; predecessor++) {
 				m_ActivitiesPredecessors[activity].push_back(predecessor);
@@ -600,5 +600,43 @@ public:
 		int randomActivity = RandomSelect<int>(activitiesThatHasEdge);
 		int randomActivityPredecessorIndex = random() * m_ActivitiesPredecessors[randomActivity].size();
 		m_ActivitiesPredecessors[randomActivity].erase(m_ActivitiesPredecessors[randomActivity].begin() + randomActivityPredecessorIndex);
-	}
+	}	
+
 };
+
+
+void RCPSP::SaveToCPlexFile(std::string filename) {
+	std::ofstream cplexFile(filename + ".cplex");
+	cplexFile << this->m_ActivitiesCount << " " << this->m_ResourcesCount<<std::endl;
+	//Print Resources Stock
+	for (int i = 0; i < this->m_ResourcesStock.size(); i++) {
+		cplexFile << this->m_ResourcesStock[i]<<" ";
+	}
+	cplexFile << std::endl;
+	
+	//Print Activities Resource Consumption
+	for (int activity = 0; activity < this->m_ActivitiesResourceConsumption.size(); activity++) {
+		for (int resource = 0; resource < this->m_ActivitiesResourceConsumption[activity].size(); resource++) {
+			cplexFile << this->m_ActivitiesResourceConsumption[activity][resource]<<" ";
+		}
+		cplexFile << std::endl;
+	}
+
+	//Print PredecessorsMatrix
+
+	for (int i = 0; i < this->m_ActivitiesCount; i++) {
+		for (int j = 0; j < this->m_ActivitiesCount; j++) {
+			if (this->m_PredecessorsMatrix[i][j])
+				cplexFile << "1 ";
+			else
+				cplexFile << "0 ";
+		}
+		cplexFile << std::endl;
+	}
+
+	//Print Earliest Starts of Activities
+	for (int activity = 0; activity < this->m_ActivitiesCount; activity++) {
+		this->m_ActivitiesEarliestStart[activity];
+	}
+
+}
