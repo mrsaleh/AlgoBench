@@ -5,6 +5,8 @@
 #include <cmath>
 #include <exception>
 #include <iostream>
+#include <windows.h>
+
 
 bool operator == (const RCPSP& lhs, const RCPSP& rhs) {
 	if (lhs.m_ActivitiesCount != rhs.m_ActivitiesCount)
@@ -154,12 +156,66 @@ void RCPSP::CalculateProgressiveLevels() {
 	m_CorrectedLevelsCount = this->m_LevelsCount - 2;
 }
 
-RCPSP::RCPSP(std::string pattersonFilename) {
-	std::ifstream pattersonFile;
-	pattersonFile.open(pattersonFilename, std::ios::in);
-	if (!pattersonFile) {
-		throw pattersonFilename + " file not found";
+RCPSP::RCPSP(int activitiesCount) {
+	this->m_ActivitiesCount = activitiesCount;
+	m_RandomGenerator = std::default_random_engine(std::chrono::system_clock::now().time_since_epoch().count());
+	m_Distribution = std::uniform_int_distribution<int>(0, activitiesCount - 1);
+
+	//create predecessors and successors
+	m_ActivitiesPredecessors.resize(activitiesCount);
+	m_ActivitiesSuccessors.resize(activitiesCount);
+	for (int activity = activitiesCount; activity >= 1; activity--) {
+		for (int predecessor = 1; predecessor <= activity; predecessor++) {
+			m_ActivitiesPredecessors[activity - 1].push_back(predecessor);
+			m_ActivitiesSuccessors[predecessor - 1].push_back(activity);
+		}
 	}
+
+	m_CorrectedActivitiesCount = m_ActivitiesCount - 2; // ActivitiesCount used in formula is without first and last dummy nodes
+
+//	CalculatePredecessors();
+	CalculateProgressiveLevels();
+}
+
+void RCPSP::RandomReduction() {
+	int randomActivity = 0;
+
+	// select a random activity that has at least one predecessor
+	do {
+		randomActivity = m_Distribution(m_RandomGenerator);
+	} while (m_ActivitiesPredecessors[randomActivity].size() == 0);
+
+	int randomEdgeIndex = 0;
+	do {
+		randomEdgeIndex = m_Distribution(m_RandomGenerator);
+	} while (randomEdgeIndex >= m_ActivitiesPredecessors[randomActivity].size());
+
+	auto selectedEdge = m_ActivitiesPredecessors[randomActivity].begin() + randomEdgeIndex;
+
+	m_ActivitiesSuccessors[*selectedEdge].push_back(randomActivity);
+	m_ActivitiesPredecessors[randomActivity].erase(selectedEdge);
+
+	//Correcting the graph
+	//Connect activities that has no predecessor to the first node
+	for (int activity = 0; activity < this->m_ActivitiesCount; activity++) {
+		if (m_ActivitiesPredecessors[activity].size() == 0) {
+			m_ActivitiesPredecessors[activity].push_back(0);
+			m_ActivitiesSuccessors[0].push_back(activity);
+		}
+	}
+
+	//connect activities that has no successor to the last node
+	for (int activity = 0; activity < this->m_ActivitiesCount; activity++) {
+		if (this->m_ActivitiesSuccessors[activity].size() == 0) {
+			m_ActivitiesSuccessors[activity].push_back(this->m_ActivitiesCount - 1);
+			m_ActivitiesPredecessors[this->m_ActivitiesCount - 1].push_back(activity);
+		}
+	}
+}
+
+
+RCPSP::RCPSP(std::ifstream & pattersonFile) {
+
 	pattersonFile >> this->m_ActivitiesCount;
 	pattersonFile >> this->m_ResourcesCount;
 
@@ -197,6 +253,7 @@ RCPSP::RCPSP(std::string pattersonFilename) {
 	//Regressive levels calculation require progressive levels calculation
 	CalculateRegressiveLevels();
 	CalculateActivitiesEearliestStartRecursive();
+	CalculateActivitiesLatestStartRecursive();
 	GeneratePredecessorsMatrix();
 	//Values required for I1 to I6 indicators
 	CalculateAverageOfLevelsWidths();
@@ -266,11 +323,11 @@ float RCPSP::ComputeTAO() {
 	return sigma / keiP;
 }
 
-int RCPSP::FindActivityEarliestFinishRecursive(int activity) {
+int RCPSP::FindActivityEarliestFinishRecursive(int activity) { //activity is not index
 
 
 	if (activity == 1) {
-		return (this->m_ActivitiesDuration[0]);
+		return 0;
 	}
 	else {
 		//Find max of predecessors duration
@@ -296,23 +353,38 @@ void RCPSP::CalculateActivitiesEearliestStartRecursive() {
 int RCPSP::FindActivityLatestFinishRecursive(int activity) {
 
 
-	if (activity == this->m_ActivitiesCount-1) {
-		return (FindActivityEarliestFinishRecursive(activity));
+	if (activity == this->m_ActivitiesCount) {
+		auto lf = FindActivityEarliestFinishRecursive(activity);
+		std::cout << activity << ">>" << lf << std::endl;
+		return lf;
 	}
 	else {
 		//Find min of successors duration
-		int min = FindActivityEarliestFinishRecursive(this->m_ActivitiesCount - 1);
-		for (auto successor = m_ActivitiesSuccessors[activity - 1].begin(); successor != m_ActivitiesSuccessors[activity - 1].end(); successor++) {
-			int lf = FindActivityLatestFinishRecursive(*successor) - this->m_ActivitiesDuration[activity - 1];
+		auto successor = m_ActivitiesSuccessors[activity - 1].begin();
+		int min = FindActivityLatestFinishRecursive(*successor) - this->m_ActivitiesDuration[*successor - 1];
+		successor++;
+
+
+		for (; successor != m_ActivitiesSuccessors[activity - 1].end(); successor++) {
+			int lf = FindActivityLatestFinishRecursive(*successor) - this->m_ActivitiesDuration[*successor - 1];
 			if (lf < min)
 				min = lf;
 		}
+
+		std::cout << activity << ">>" << min << std::endl;
+
 		return min;
 	}
 }
 
 void RCPSP::CalculateActivitiesLatestStartRecursive() {
 	this->m_ActivitiesLatestStart.resize(this->m_ActivitiesCount, -1);
+	std::vector<int> lastestFinishes;
+	lastestFinishes.resize(this->m_ActivitiesCount, -1);
+	for (int activity = 1; activity <= this->m_ActivitiesCount; activity++) {
+		lastestFinishes[activity - 1] = FindActivityLatestFinishRecursive(activity);
+	}
+
 
 	for (int activity = 1; activity <= this->m_ActivitiesCount; activity++) {
 		this->m_ActivitiesLatestStart[activity - 1] = FindActivityLatestFinishRecursive(activity) - this->m_ActivitiesDuration[activity - 1];
@@ -523,7 +595,7 @@ float RCPSP::I5() {
 		sigma += (CalculateArcsWithLength(level) * (this->m_CorrectedLevelsCount - level - 1)) / (this->m_CorrectedLevelsCount - 2);
 	}
 	sigma += -this->m_CorrectedActivitiesCount + this->m_ProgressiveLevelsActivities[1].size();
-	return ( sigma / static_cast<float>(this->m_TotalNumberOfArcs - this->m_CorrectedActivitiesCount + this->m_ProgressiveLevelsActivities[1].size()));
+	return (sigma / static_cast<float>(this->m_TotalNumberOfArcs - this->m_CorrectedActivitiesCount + this->m_ProgressiveLevelsActivities[1].size()));
 }
 
 float RCPSP::I6() {
@@ -585,73 +657,30 @@ float RCPSP::CalculateResourceStrength(int resource) {
 	return (static_cast<float>(this->m_ResourcesStock[resource]) - static_cast<float>(rkmin)) / (static_cast<float>(rkmax) - static_cast<float>(rkmin));
 }
 
-float random() {
-	return (static_cast<float>(rand()) / static_cast<float>(RAND_MAX));
-}
-
-std::vector<int> RandomSelectSet(std::vector<int> set, int count) {
-	std::vector<int> result;
-
-	for (int i = 0; i < count; i++) {
-		int randomItem = random() * set.size();
-		result.push_back(set.at(randomItem));
-		set.erase(set.begin() + randomItem);
-	}
-	return result;
-}
-
-template<typename T>
-T RandomSelect(std::vector<T> set) {
-	int randomItem = random() * set.size();
-	T result = set.at(randomItem);
-	return result;
-}
-
-class PrecedenceMatrix {
-private:
-	std::vector<std::vector<int>> m_ActivitiesPredecessors;
-	int m_ActivitiesCount;
-public:
-	PrecedenceMatrix(int activities_count) {
-		m_ActivitiesPredecessors.resize(activities_count);
-		for (int activity = activities_count - 1; activity >= 0; activity--) {
-			for (int predecessor = 0; predecessor < activity; predecessor++) {
-				m_ActivitiesPredecessors[activity].push_back(predecessor);
-			}
-		}
-	}
-
-	void RandomReduction() {
-		std::vector<int> activitiesThatHasEdge;
-		for (int activity = 1; activity <= m_ActivitiesCount - 2; activity++) {
-			if (m_ActivitiesPredecessors[activity].size() > 0)
-				activitiesThatHasEdge.push_back(activity);
-		}
-		int randomActivity = RandomSelect<int>(activitiesThatHasEdge);
-		int randomActivityPredecessorIndex = random() * m_ActivitiesPredecessors[randomActivity].size();
-		m_ActivitiesPredecessors[randomActivity].erase(m_ActivitiesPredecessors[randomActivity].begin() + randomActivityPredecessorIndex);
-	}	
-
-};
-
-
 void RCPSP::SaveToCPlexFile(std::string filename) {
-	std::ofstream cplexFile(filename + ".cplex");
-	cplexFile << this->m_ActivitiesCount << " " << this->m_ResourcesCount<<std::endl;
+	std::string fname = filename + ".cplex";
+	std::ofstream cplexFile(fname);
+
+	char full_path[MAX_PATH];
+
+	GetFullPathNameA(fname.c_str(), MAX_PATH, full_path, NULL);
+	std::cout << full_path << std::endl;
+
+	cplexFile << this->m_ActivitiesCount << " " << this->m_ResourcesCount << std::endl << std::endl;
 	//Print Resources Stock
 	for (int i = 0; i < this->m_ResourcesStock.size(); i++) {
-		cplexFile << this->m_ResourcesStock[i]<<" ";
+		cplexFile << this->m_ResourcesStock[i] << " ";
 	}
-	cplexFile << std::endl;
-	
+	cplexFile << std::endl << std::endl;
+
 	//Print Activities Resource Consumption
 	for (int activity = 0; activity < this->m_ActivitiesResourceConsumption.size(); activity++) {
 		for (int resource = 0; resource < this->m_ActivitiesResourceConsumption[activity].size(); resource++) {
-			cplexFile << this->m_ActivitiesResourceConsumption[activity][resource]<<" ";
+			cplexFile << this->m_ActivitiesResourceConsumption[activity][resource] << " ";
 		}
 		cplexFile << std::endl;
 	}
-
+	cplexFile << std::endl;
 	//Print PredecessorsMatrix
 
 	for (int i = 0; i < this->m_ActivitiesCount; i++) {
@@ -664,9 +693,19 @@ void RCPSP::SaveToCPlexFile(std::string filename) {
 		cplexFile << std::endl;
 	}
 
+	cplexFile << std::endl;
+
 	//Print Earliest Starts of Activities
 	for (int activity = 0; activity < this->m_ActivitiesCount; activity++) {
-		this->m_ActivitiesEarliestStart[activity];
+		cplexFile << this->m_ActivitiesEarliestStart[activity] << " ";
 	}
+	cplexFile << std::endl << std::endl;
+
+	//Print Latest Starts Of Activities
+	for (int activity = 0; activity < this->m_ActivitiesCount; activity++) {
+		cplexFile << this->m_ActivitiesLatestStart[activity] << " ";
+	}
+	cplexFile << std::endl << std::endl;
+	cplexFile.close();
 
 }

@@ -1,10 +1,21 @@
 #include <vector>
 #include <string>
+#include <random>
+#include <chrono>
+
+
+template<typename T>
+T RandomSelect(std::vector<T> set);
+
 
 class RCPSP{
 	friend bool operator == (const RCPSP& lhs,const RCPSP& rhs);
 
 	private:
+		//Random generator
+		std::default_random_engine m_RandomGenerator; 
+		std::uniform_int_distribution<int> m_Distribution;		
+
 		int m_LevelsCount = -1;
 		int m_CorrectedLevelsCount = -1;
 		int m_ResourcesCount = -1;
@@ -75,14 +86,14 @@ class RCPSP{
 	float CalculateResourceFactor();
 	float CalculateResourceConstrainedness(int resource);
 	float CalculateResourceStrength(int resource);
-
+	void RandomReduction();
 public:
 	//Static Methods
 
 	public:
 		//Public Methods
-	RCPSP(std::string pattersonFilename);	
-
+	RCPSP(std::ifstream & pattersonFile);
+	RCPSP(int activitiesCount);
 	int GetResourcesCount() {
 		return m_ResourcesCount;
 	}
